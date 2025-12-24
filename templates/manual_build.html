@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual Build - Unicorn PC Builder</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/manual_build.css">
+</head>
+<body>
+
+    <div class="configurator-wrapper">
+        <header class="roadmap">
+            <ol>
+                <li id="nav-brand" class="active">Brand</li>
+                <li id="nav-cpu">CPU</li>
+                <li id="nav-motherboard">Mobo</li>
+                <li id="nav-gpu">GPU</li>
+                <li id="nav-ram">RAM</li>
+                <li id="nav-cooler">Cooler</li>
+                <li id="nav-storage">Storage</li>
+                <li id="nav-psu">PSU</li>
+                <li id="nav-case">Case</li>
+                <li id="nav-done">Done</li>
+            </ol>
+        </header>
+
+        <div class="main-content">
+            <aside class="side-panel">
+                <div class="build-summary" id="build-summary">
+                    <p style="text-align: center; color: #999; margin-top: 20px;">Your build is empty</p>
+                </div>
+                <div class="price-box">
+                    <h3>Total</h3>
+                    <span id="total-price">$0.00</span>
+                </div>
+            </aside>
+
+            <div class="list-area">
+                <header>
+                    <a href="/" class="back-link">← Back to Home</a>
+                    <h1 id="page-title">Select Platform</h1>
+                </header>
+
+                <main>
+                    <div id="step-brand" class="step active">
+                        <div class="brand-grid">
+                            <div id="btn-intel" class="brand-btn intel" onclick="selectBrand('Intel')">Intel</div>
+                            <div id="btn-amd" class="brand-btn amd" onclick="selectBrand('AMD')">AMD</div>
+                        </div>
+                    </div>
+
+                    <div id="step-cpu" class="step">
+                        <div id="grid-cpu" class="component-grid"></div>
+                        <div class="nav-buttons">
+                            <button class="btn btn-prev" onclick="goBack()">Back</button>
+                            <button class="btn btn-next" onclick="nextStepFrom('cpu')" id="cpu-next-btn" disabled>Next Step</button>
+                        </div>
+                    </div>
+
+                    <div id="step-motherboard" class="step">
+                        <div id="grid-motherboard" class="component-grid"></div>
+                        <div class="nav-buttons">
+                            <button class="btn btn-prev" onclick="goBack()">Back</button>
+                            <button class="btn btn-next" onclick="nextStepFrom('motherboard')" id="motherboard-next-btn" disabled>Next Step</button>
+                        </div>
+                    </div>
+
+                    <div id="step-gpu" class="step">
+                        <div id="grid-gpu" class="component-grid"></div>
+                        <div class="nav-buttons">
+                            <button class="btn btn-prev" onclick="goBack()">Back</button>
+                            <button class="btn btn-next" onclick="nextStepFrom('gpu')" id="gpu-next-btn" disabled>Next Step</button>
+                        </div>
+                    </div>
+
+                    <div id="step-ram" class="step">
+                        <div id="grid-ram" class="component-grid"></div>
+                        <div class="nav-buttons">
+                            <button class="btn btn-prev" onclick="goBack()">Back</button>
+                            <button class="btn btn-next" onclick="nextStepFrom('ram')" id="ram-next-btn" disabled>Next Step</button>
+                        </div>
+                    </div>
+
+                    <div id="step-cooler" class="step">
+                        <div id="grid-cooler" class="component-grid"></div>
+                        <div class="nav-buttons">
+                            <button class="btn btn-prev" onclick="goBack()">Back</button>
+                            <button class="btn btn-next" onclick="nextStepFrom('cooler')" id="cooler-next-btn" disabled>Next Step</button>
+                        </div>
+                    </div>
+
+                    <div id="step-storage" class="step">
+                        <div id="grid-storage" class="component-grid"></div>
+                        <div class="nav-buttons">
+                            <button class="btn btn-prev" onclick="goBack()">Back</button>
+                            <button class="btn btn-next" onclick="nextStepFrom('storage')" id="storage-next-btn" disabled>Next Step</button>
+                        </div>
+                    </div>
+
+                    <div id="step-psu" class="step">
+                        <div id="grid-psu" class="component-grid"></div>
+                        <div class="nav-buttons">
+                            <button class="btn btn-prev" onclick="goBack()">Back</button>
+                            <button class="btn btn-next" onclick="nextStepFrom('psu')" id="psu-next-btn" disabled>Next Step</button>
+                        </div>
+                    </div>
+
+                    <div id="step-case" class="step">
+                        <div id="grid-case" class="component-grid"></div>
+                        <div class="nav-buttons">
+                            <button class="btn btn-prev" onclick="goBack()">Back</button>
+                            <button class="btn btn-next" onclick="finishBuild()" id="case-next-btn" disabled>Finish Build</button>
+                        </div>
+                    </div>
+
+                    <div id="step-done" class="step">
+                        <div class="validation-box">
+                            <div id="validation-result">Analyzing Build...</div>
+                        </div>
+                        <div class="nav-buttons">
+                            <button class="btn btn-prev" onclick="goBack()">Make Changes</button>
+                            <button class="btn btn-next" onclick="predictPerformance()">Predict Performance</button>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+
+<script src="/static/js/manual_build.js"></script>
+</body>
+</html>

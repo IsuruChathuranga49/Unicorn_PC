@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Performance Prediction - Unicorn PC Builder</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/performance.css">
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← Back to Home</a>
+        
+        <header>
+            <h1>🚀 Performance Predictor</h1>
+            <p>AI-Powered Performance Analysis for Your Build</p>
+        </header>
+
+        <div class="build-summary" id="buildSummary">
+            <h2>Your Build</h2>
+            <div class="build-components">
+                <div class="component-item">
+                    <span class="label">⚙️ CPU</span>
+                    <span class="value" id="display-cpu">-</span>
+                </div>
+                <div class="component-item">
+                    <span class="label">🎨 GPU</span>
+                    <span class="value" id="display-gpu">-</span>
+                </div>
+                <div class="component-item">
+                    <span class="label">💾 RAM</span>
+                    <span class="value" id="display-ram">-</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="resultsSection" class="results-section hidden">
+            <h2 class="section-title">Performance Analysis</h2>
+            
+            <div id="bottleneckSummary" class="bottleneck-box"></div>
+
+            <div id="cardsContainer" class="card-grid"></div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Analyzing performance with AI...</p>
+        </div>
+    </div>
+
+    <script src="/static/js/performance.js"></script>
+</body>
+</html>

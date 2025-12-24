@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intelligent Build - Unicorn PC Builder</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #f4f4f4;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: #fff;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        }
+
+        .header { text-align: center; margin-bottom: 40px; }
+        .header h1 { color: #667eea; font-weight: 700; font-size: 2.5rem; margin-bottom: 10px; }
+        .header p { color: #666; font-size: 1.1rem; }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+
+        .input-group { margin-bottom: 25px; }
+        .input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #444;
+            font-size: 1rem;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #eee;
+            border-radius: 8px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1rem;
+            background-color: #fff;
+            transition: border-color 0.3s;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        .button-group { display: flex; gap: 15px; margin-top: 30px; }
+        
+        button {
+            flex: 1;
+            padding: 15px;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            font-size: 1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-recommend {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-recommend:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3); }
+
+        .btn-clear {
+            background-color: #f0f0f0;
+            color: #555;
+            border: 2px solid #ddd;
+        }
+        .btn-clear:hover { background-color: #e0e0e0; }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 30px;
+            color: #667eea;
+            font-weight: 500;
+        }
+        .loading.show { display: block; }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 4px solid #eee;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .error-card {
+            background: #fde8e9;
+            border-left: 4px solid #dc3545;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+        .error-card.show { display: block; animation: fadeIn 0.3s; }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #666;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .back-link:hover { color: #667eea; }
+
+        @media (max-width: 768px) {
+            .input-row { grid-template-columns: 1fr; }
+            .container { padding: 25px; }
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    
+    <div class="container">
+        <a href="/" class="back-link">← Back to Home</a>
+        
+        <div class="header">
+            <h1>🤖 Intelligent Build Mode</h1>
+            <p>Tell us what you need, and AI will build it for you.</p>
+        </div>
+
+        <div class="input-row">
+            <div class="input-group">
+                <label for="useCase">Primary Use Case</label>
+                <select id="useCase" onchange="onUseCaseChange()">
+                    <option value="">Select Use Case...</option>
+                    <option value="Gaming">Gaming</option>
+                    <option value="Productivity">Productivity</option>
+                    <option value="Design/Render">Design/Render</option>
+                    <option value="Workstation">Workstation</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="resolution">Target Resolution</label>
+                <select id="resolution" onchange="onResolutionChange()">
+                    <option value="">Select Resolution...</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="input-group" id="fpsGroup" style="display: none;">
+            <label for="fps">Target FPS</label>
+            <select id="fps">
+                <option value="">Select FPS...</option>
+                <option value="60">60 FPS</option>
+                <option value="100">100 FPS</option>
+                <option value="120">120 FPS</option>
+                <option value="160">160 FPS</option>
+                <option value="200">200 FPS</option>
+                <option value="240">240 FPS</option>
+                <option value="280">280 FPS</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label for="budget">Your Budget (USD)</label>
+            <input type="number" id="budget" value="1500" min="0" step="100" placeholder="e.g. 1500">
+        </div>
+
+        <div class="button-group">
+            <button class="btn-recommend" onclick="getRecommendation()">🚀 Get Recommendation</button>
+            <button class="btn-clear" onclick="clearForm()">Clear Form</button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            Analyzing components...
+        </div>
+
+        <div class="error-card" id="errorCard"></div>
+    </div>
+
+    <script>
+        let options = {};
+
+        document.addEventListener('DOMContentLoaded', loadOptions);
+
+        async function loadOptions() {
+            try {
+                const response = await fetch('/api/intelligent/options');
+                options = await response.json();
+                updateSelectOptions();
+            } catch (error) {
+                console.error('Error loading options:', error);
+            }
+        }
+
+        function updateSelectOptions() {
+            if (options.resolutions) {
+                const resolutionSelect = document.getElementById('resolution');
+                let availableResolutions = options.resolutions;
+                const useCase = document.getElementById('useCase').value;
+                
+                if (useCase === 'Workstation') {
+                    availableResolutions = availableResolutions.filter(r => r === '1440P');
+                }
+                
+                resolutionSelect.innerHTML = '<option value="">Select Resolution...</option>' + availableResolutions.map(r => 
+                    `<option value="${r}">${r}</option>`
+                ).join('');
+            }
+        }
+
+        function onUseCaseChange() {
+            updateSelectOptions();
+            onResolutionChange();
+        }
+
+        function onResolutionChange() {
+            const useCase = document.getElementById('useCase').value;
+            
+            if (useCase === 'Gaming') {
+                const fpsSelect = document.getElementById('fps');
+                fpsSelect.innerHTML = '<option value="">Select FPS...</option>' + 
+                    [60, 100, 120, 160, 200, 240, 280].map(fps => 
+                        `<option value="${fps}">${fps} FPS</option>`
+                    ).join('');
+                document.getElementById('fpsGroup').style.display = 'block';
+            } else {
+                document.getElementById('fpsGroup').style.display = 'none';
+            }
+        }
+
+        async function getRecommendation() {
+            const budget = parseInt(document.getElementById('budget').value);
+            const resolution = document.getElementById('resolution').value;
+            const useCase = document.getElementById('useCase').value;
+            const fps = document.getElementById('fps').value;
+
+            if (!budget || budget <= 0) {
+                showError('Please enter a valid budget');
+                return;
+            }
+
+            if (!useCase) {
+                showError('Please select a use case');
+                return;
+            }
+
+            if (!resolution) {
+                showError('Please select a resolution');
+                return;
+            }
+
+            if (useCase === 'Gaming' && !fps) {
+                showError('Please select FPS target for Gaming');
+                return;
+            }
+
+            showLoading(true);
+            hideError();
+
+            try {
+                const requestBody = {
+                    use_case: useCase,
+                    resolution: resolution,
+                    budget: budget
+                };
+                if (fps) requestBody.fps = parseInt(fps);
+                
+                const response = await fetch('/api/intelligent/recommend', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+
+                const data = await response.json();
+                showLoading(false);
+
+                if (data.error) {
+                    showError(data.error + (data.suggestion ? '\n💡 ' + data.suggestion : ''));
+                } else {
+                    // Redirect to performance prediction with build data
+                    sessionStorage.setItem('buildData', JSON.stringify({
+                        cpu: data.CPU,
+                        gpu: data.GPU,
+                        ram: parseInt(data.RAM),
+                        fromIntelligent: true,
+                        buildDetails: data
+                    }));
+                    window.location.href = '/performance-predict';
+                }
+            } catch (error) {
+                showLoading(false);
+                showError('Error fetching recommendation: ' + error.message);
+            }
+        }
+
+        function showError(message) {
+            const errorCard = document.getElementById('errorCard');
+            errorCard.innerText = message;
+            errorCard.classList.add('show');
+        }
+
+        function hideError() {
+            document.getElementById('errorCard').classList.remove('show');
+        }
+
+        function showLoading(show) {
+            const loading = document.getElementById('loading');
+            if (show) loading.classList.add('show');
+            else loading.classList.remove('show');
+        }
+
+        function clearForm() {
+            document.getElementById('budget').value = '1500';
+            document.getElementById('useCase').value = '';
+            document.getElementById('resolution').value = '';
+            document.getElementById('fps').value = '';
+            document.getElementById('fpsGroup').style.display = 'none';
+            hideError();
+        }
+    </script>
+</body>
+</html>
