@@ -1,71 +1,113 @@
-# Unicorn PC Builder - Backend API
-# Flask REST API for Next.js Frontend
+# Unicorn PC Builder - Main Application
+# This application helps users build custom PCs with three modes:
+# 1. Intelligent Build - AI recommends PC based on budget and needs
+# 2. Manual Build - User selects each component manually
+# 3. Performance Prediction - Predicts gaming FPS and performance
 
-from flask import Flask, request, jsonify
+from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 import pandas as pd
 import joblib
 import os
 import numpy as np
 
-# Import Firebase for Manual Build (Optional)
+# Try to import Firebase for Manual Build database
+# Firebase stores all hardware components (CPU, GPU, RAM, etc.)
 try:
     import firebase_admin
     from firebase_admin import credentials, firestore
     FIREBASE_AVAILABLE = True
 except ImportError:
     FIREBASE_AVAILABLE = False
-    print("⚠️ Firebase not available. Manual Build will use mock data.")
+    print("Warning: Firebase not available. Manual Build will use mock data.")
 
 app = Flask(__name__)
-
-# CORS Configuration - Allow Next.js frontend
-CORS(app, resources={
-    r"/api/*": {
-        "origins": [
-            "http://localhost:3000",  # Next.js dev server
-            "https://*.vercel.app",   # Vercel deployment
-            "https://*.azurestaticapps.net"  # Azure deployment
-        ],
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type"]
-    }
-})
+CORS(app)
 
 # ============================================================================
-# DATA LOADING
+# DATA LOADING - Load all necessary files
 # ============================================================================
 
-# Load Intelligent Build CSV Data
+# Load dataset for AI recommendations (contains pre-built PC configurations)
 try:
     intelligent_df = pd.read_csv('data/final_ruleset_data.csv')
-    print("✅ Intelligent Build data loaded successfully")
+    print("SUCCESS: Intelligent Build data loaded successfully")
 except FileNotFoundError:
-    print("❌ Error: 'data/final_ruleset_data.csv' not found")
+    print("ERROR: 'data/final_ruleset_data.csv' not found")
     intelligent_df = None
 
-# Load Performance Prediction Models
-MODEL_DIR = 'models'
+# Also load the full dataset for exact FPS lookups
 try:
-    fps_model = joblib.load(os.path.join(MODEL_DIR, 'fps_model.pkl'))
-    gaming_model = joblib.load(os.path.join(MODEL_DIR, 'gaming_model.pkl'))
-    render_model = joblib.load(os.path.join(MODEL_DIR, 'render_model.pkl'))
-    print("✅ ML Models loaded successfully")
-except FileNotFoundError as e:
-    print(f"❌ Error loading models: {e}")
+    fps_lookup_df = pd.read_csv('data/final_ruleset_data.csv')
+    print("SUCCESS: FPS lookup data loaded successfully")
+except FileNotFoundError:
+    print("ERROR: FPS lookup data not found")
+    fps_lookup_df = None
+
+# Load machine learning models for performance prediction
+# These models predict FPS, gaming suitability, and rendering performance
+MODEL_DIR = 'models'
+fps_model = gaming_model = render_model = None
+try:
+    # Try loading with protocol 4 for better compatibility
+    import pickle
+    with open(os.path.join(MODEL_DIR, 'fps_model.pkl'), 'rb') as f:
+        fps_model = pickle.load(f)
+    with open(os.path.join(MODEL_DIR, 'gaming_model.pkl'), 'rb') as f:
+        gaming_model = pickle.load(f)
+    with open(os.path.join(MODEL_DIR, 'render_model.pkl'), 'rb') as f:
+        render_model = pickle.load(f)
+    print("SUCCESS: ML Models loaded successfully (Python 3.13 compatible)")
+except Exception as e:
+    print(f"WARNING: Error loading models: {e}")
+    print("WARNING: Performance prediction will use simplified calculations")
     fps_model = gaming_model = render_model = None
 
-# Load Hardware Lookup Database
+# ============================================================================
+# HELPER FUNCTION - Find exact FPS from CSV data
+# ============================================================================
+
+def find_exact_fps_from_csv(cpu_score, gpu_score, ram_gb, resolution_name):
+    """
+    Try to find exact FPS match from CSV data.
+    Returns FPS if exact match found, None otherwise.
+    """
+    if fps_lookup_df is None:
+        return None
+    
+    # CSV stores resolutions as strings: "1080P", "1440P", "4K"
+    # We need to convert our input format to match
+    resolution_csv_format = resolution_name.upper().replace('P', 'P')  # "1080p" -> "1080P"
+    
+    # Look for exact match (with small tolerance for floating point)
+    tolerance = 0.1
+    matches = fps_lookup_df[
+        (abs(fps_lookup_df['cpu_score'] - cpu_score) < tolerance) &
+        (abs(fps_lookup_df['gpu_score'] - gpu_score) < tolerance) &
+        (fps_lookup_df['ram_gb'] == ram_gb) &
+        (fps_lookup_df['resolution'] == resolution_csv_format)
+    ]
+    
+    if len(matches) > 0:
+        fps = matches.iloc[0]['fps']
+        print(f"  ✓ CSV Exact Match: {resolution_name} = {fps} FPS")
+        return int(fps)
+    
+    return None
+
+# Load hardware scores database (contains performance scores for CPUs and GPUs)
+# Used to calculate performance predictions
 try:
     lookup_df = pd.read_csv('data/hardware_lookup.csv')
     lookup_df['clean_name'] = lookup_df['name'].astype(str).str.lower().str.replace(" ", "")
     hw_db = lookup_df.set_index('clean_name')['score'].to_dict()
-    print("✅ Hardware lookup database loaded")
+    print("SUCCESS: Hardware lookup database loaded")
 except FileNotFoundError:
-    print("❌ Error: 'data/hardware_lookup.csv' not found")
+    print("ERROR: 'data/hardware_lookup.csv' not found")
     hw_db = {}
 
-# Initialize Firebase for Manual Build Mode
+# Initialize Firebase connection for Manual Build Mode
+# Firebase stores all hardware components in cloud database
 db = None
 if FIREBASE_AVAILABLE:
     try:
@@ -74,44 +116,51 @@ if FIREBASE_AVAILABLE:
             cred = credentials.Certificate(cred_path)
             firebase_admin.initialize_app(cred)
             db = firestore.client()
-            print("✅ Firebase Firestore connected successfully")
-            print("✅ Manual Build will use real database")
+            print("SUCCESS: Firebase Firestore connected successfully")
+            print("SUCCESS: Manual Build will use real database")
         else:
-            print("❌ serviceAccountKey.json not found")
-            print("⚠️ Manual Build will NOT work without Firebase")
+            print("ERROR: serviceAccountKey.json not found")
+            print("WARNING: Manual Build will NOT work without Firebase")
     except Exception as e:
-        print(f"❌ Firebase initialization error: {e}")
-        print("⚠️ Manual Build will NOT work without Firebase")
+        print(f"ERROR: Firebase initialization error: {e}")
+        print("WARNING: Manual Build will NOT work without Firebase")
         db = None
 else:
-    print("❌ firebase-admin package not installed")
-    print("⚠️ Run: pip install firebase-admin")
+    print("ERROR: firebase-admin package not installed")
+    print("WARNING: Run: pip install firebase-admin")
 
 # ============================================================================
-# HEALTH CHECK
+# HOMEPAGE ROUTE
 # ============================================================================
 
-@app.route('/api/health', methods=['GET'])
-def health_check():
-    """Health check endpoint"""
-    return jsonify({
-        "status": "healthy",
-        "service": "Unicorn PC Builder API",
-        "version": "2.0.0",
-        "data_loaded": intelligent_df is not None,
-        "models_loaded": fps_model is not None,
-        "firebase_available": db is not None
-    })
+# Main landing page - shows two build modes
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 # ============================================================================
-# INTELLIGENT BUILD MODE API
+# INTELLIGENT BUILD MODE - AI recommends PC based on budget
 # ============================================================================
 
+# Show intelligent build page
+@app.route('/intelligent-build')
+def intelligent_build():
+    return render_template('intelligent_build.html')
+
+# Find best PC configuration based on user requirements
 def get_recommendation(budget, resolution, use_case, fps=None):
-    """AI recommendation logic from Intelligent Build Mode"""
+    """Recommend PC based on budget, resolution, use case, and target FPS
+    
+    ENHANCED ALGORITHM - Finds EXACT MATCH for resolution & FPS target:
+    1. Prioritize EXACT resolution match first (must match)
+    2. For gaming with FPS target: find closest match to target FPS
+    3. Select best build within budget that matches these criteria
+    """
     if intelligent_df is None:
         return {"error": "Dataset not loaded"}
     
+    # Define ranking strategy for each use case
+    # Gaming focuses on GPU, Productivity on CPU, others on combined score
     use_case_logic = {
         'Gaming': {'filter_col': 'is_good_for_gaming', 'rank_by': 'gpu_score'},
         'Productivity': {'filter_col': 'is_good_for_productivity', 'rank_by': 'cpu_score'},
@@ -124,39 +173,66 @@ def get_recommendation(budget, resolution, use_case, fps=None):
 
     logic = use_case_logic[use_case]
     
-    # Filter by use case
+    # Step 1: Filter PCs suitable for selected use case
     use_case_df = intelligent_df[intelligent_df[logic['filter_col']] == 1].copy()
     if use_case_df.empty:
         return {"error": f"No PC found for '{use_case}' in dataset."}
     
-    # Filter by budget
-    filtered_df = use_case_df[use_case_df['price'] <= budget].copy()
+    # Step 2: CRITICAL - Filter by EXACT resolution first (MUST MATCH)
+    resolution_filtered = use_case_df[use_case_df['resolution'] == resolution].copy()
+    if resolution_filtered.empty:
+        return {
+            "error": f"No {use_case} PC found for {resolution} resolution.",
+            "suggestion": f"Try a different resolution. Available: {', '.join(use_case_df['resolution'].unique())}"
+        }
+    
+    # Step 3: Filter by user's budget
+    filtered_df = resolution_filtered[resolution_filtered['price'] <= budget].copy()
     if filtered_df.empty:
-        cheapest = use_case_df.sort_values('price').iloc[0]
+        # Show cheapest option for this resolution if budget is too low
+        cheapest = resolution_filtered.sort_values('price').iloc[0]
         cheapest_price = int(cheapest['price'])
         shortage = cheapest_price - budget
         return {
-            "error": f"No {use_case} PC found within ${budget} budget.",
-            "suggestion": f"Cheapest {use_case} PC available is ${cheapest_price} (shortage: ${shortage})"
+            "error": f"No {use_case} PC found for {resolution} within ${budget} budget.",
+            "suggestion": f"Cheapest {use_case} PC for {resolution} is ${cheapest_price} (shortage: ${shortage})"
         }
     
-    # Filter by FPS for Gaming
+    # Step 4: ENHANCED FPS MATCHING - Find best match for target FPS
     if use_case == 'Gaming' and fps is not None:
-        fps_filtered = filtered_df[filtered_df['fps'] >= fps]
-        if not fps_filtered.empty:
-            filtered_df = fps_filtered
+        # Calculate FPS difference from target
+        filtered_df['fps_diff'] = abs(filtered_df['fps'] - fps)
+        
+        # Strategy: Find builds that meet or slightly exceed the FPS target
+        # Prefer builds close to target (not overly powerful = waste of budget)
+        meets_target = filtered_df[filtered_df['fps'] >= fps].copy()
+        
+        if not meets_target.empty:
+            # Found builds that meet target - select closest to target FPS
+            meets_target = meets_target.sort_values('fps_diff')
+            filtered_df = meets_target
+        else:
+            # No build meets target - get the highest FPS available
+            max_fps_available = filtered_df['fps'].max()
+            return {
+                "error": f"Cannot achieve {fps} FPS at {resolution} within ${budget} budget.",
+                "suggestion": f"Maximum achievable: {int(max_fps_available)} FPS at {resolution}. Increase budget or lower FPS target."
+            }
     
-    # Filter by resolution
-    resolution_filtered = filtered_df[filtered_df['resolution'] == resolution]
-    if not resolution_filtered.empty:
-        filtered_df = resolution_filtered
-    
-    # Rank and select best
+    # Step 5: Rank remaining PCs and select the best one
     rank_col = logic['rank_by']
     if rank_col == 'combined_score':
+        # Calculate combined CPU + GPU score
         filtered_df['combined_score'] = filtered_df['cpu_score'] + filtered_df['gpu_score']
 
-    ranked_df = filtered_df.sort_values(by=rank_col, ascending=False)
+    # For gaming with FPS target, prioritize closest FPS match over pure GPU score
+    if use_case == 'Gaming' and fps is not None:
+        # Sort by: 1) FPS difference (closest to target) 2) GPU score (higher is better)
+        ranked_df = filtered_df.sort_values(by=['fps_diff', rank_col], ascending=[True, False])
+    else:
+        # Sort by performance score (higher is better)
+        ranked_df = filtered_df.sort_values(by=rank_col, ascending=False)
+    
     best_pc = ranked_df.iloc[0]
     
     recommendation = {
@@ -173,12 +249,13 @@ def get_recommendation(budget, resolution, use_case, fps=None):
     
     return recommendation
 
+# API: Get available options for dropdown menus
 @app.route('/api/intelligent/options', methods=['GET'])
 def intelligent_options():
-    """Get available options for intelligent build"""
     if intelligent_df is None:
-        return jsonify({"error": "Dataset not loaded"}), 500
+        return jsonify({"error": "Dataset not loaded"})
     
+    # Get all available resolutions and use cases
     resolutions = sorted(intelligent_df['resolution'].unique().tolist())
     use_cases = ['Gaming', 'Productivity', 'Design/Render', 'Workstation']
     
@@ -189,9 +266,10 @@ def intelligent_options():
         'max_price': int(intelligent_df['price'].max())
     })
 
+# API: Get PC recommendation based on user input
 @app.route('/api/intelligent/recommend', methods=['POST'])
 def intelligent_recommend():
-    """Get AI recommendation based on requirements"""
+    # Extract user requirements from request
     data = request.json
     budget = int(data.get('budget', 1000))
     resolution = data.get('resolution', '1080P')
@@ -205,12 +283,18 @@ def intelligent_recommend():
     return jsonify(result)
 
 # ============================================================================
-# MANUAL BUILD MODE API
+# MANUAL BUILD MODE - User selects each component step by step
 # ============================================================================
 
+# Show manual build page
+@app.route('/manual-build')
+def manual_build():
+    return render_template('manual_build.html')
+
+# API: Get CPUs from database filtered by brand (Intel or AMD)
 @app.route("/api/manual/cpus", methods=["GET"])
 def get_cpus():
-    """Get CPUs filtered by brand from Firebase"""
+    """Get list of CPUs for selected brand from Firebase database"""
     brand = request.args.get('brand')
     if not brand:
         return jsonify({"error": "Brand is required"}), 400
@@ -235,9 +319,10 @@ def get_cpus():
         print(f"Error fetching CPUs: {e}")
         return jsonify({"error": f"Error fetching CPUs: {str(e)}"}), 500
 
+# API: Get compatible motherboards based on CPU socket type
 @app.route("/api/manual/motherboards", methods=["GET"])
 def get_motherboards():
-    """Get motherboards filtered by socket from Firebase"""
+    """Get motherboards that match the selected CPU's socket"""
     socket = request.args.get('socket')
     if not socket:
         return jsonify({"error": "Socket is required"}), 400
@@ -259,9 +344,10 @@ def get_motherboards():
         print(f"Error fetching Motherboards: {e}")
         return jsonify({"error": f"Error fetching Motherboards: {str(e)}"}), 500
 
+# API: Get all available graphics cards
 @app.route("/api/manual/gpus", methods=["GET"])
 def get_gpus():
-    """Get all GPUs from Firebase"""
+    """Get list of all GPUs from Firebase database"""
     if not db:
         return jsonify({"error": "Database not available"}), 500
     
@@ -279,9 +365,10 @@ def get_gpus():
         print(f"Error fetching GPUs: {e}")
         return jsonify({"error": f"Error fetching GPUs: {str(e)}"}), 500
 
+# API: Get compatible RAM based on motherboard RAM type
 @app.route("/api/manual/ram", methods=["GET"])
 def get_ram():
-    """Get RAM filtered by type from Firebase"""
+    """Get RAM that matches motherboard's RAM type (DDR4/DDR5)"""
     ram_type = request.args.get('ram_type')
     if not ram_type:
         return jsonify({"error": "RAM Type is required"}), 400
@@ -303,9 +390,10 @@ def get_ram():
         print(f"Error fetching RAM: {e}")
         return jsonify({"error": f"Error fetching RAM: {str(e)}"}), 500
 
+# API: Get compatible CPU coolers based on socket type
 @app.route("/api/manual/coolers", methods=["GET"])
 def get_coolers():
-    """Get coolers filtered by socket support from Firebase"""
+    """Get coolers that support the selected CPU socket"""
     socket = request.args.get('socket')
     if not socket:
         return jsonify({"error": "Socket is required"}), 400
@@ -329,9 +417,10 @@ def get_coolers():
         print(f"Error fetching Coolers: {e}")
         return jsonify({"error": f"Error fetching Coolers: {str(e)}"}), 500
 
+# API: Get all storage options (SSD/HDD)
 @app.route("/api/manual/storage", methods=["GET"])
 def get_storage():
-    """Get all storage options from Firebase"""
+    """Get list of all storage devices from Firebase database"""
     if not db:
         return jsonify({"error": "Database not available"}), 500
     
@@ -347,9 +436,10 @@ def get_storage():
         print(f"Error fetching Storage: {e}")
         return jsonify({"error": f"Error fetching Storage: {str(e)}"}), 500
 
+# API: Get all power supply units
 @app.route("/api/manual/psus", methods=["GET"])
 def get_psus():
-    """Get all PSUs from Firebase"""
+    """Get list of all PSUs from Firebase database"""
     if not db:
         return jsonify({"error": "Database not available"}), 500
     
@@ -365,9 +455,10 @@ def get_psus():
         print(f"Error fetching PSUs: {e}")
         return jsonify({"error": f"Error fetching PSUs: {str(e)}"}), 500
 
+# API: Get compatible cases based on motherboard size and GPU length
 @app.route("/api/manual/cases", methods=["GET"])
 def get_cases():
-    """Get cases filtered by form factor and GPU length from Firebase"""
+    """Get cases that fit the motherboard and GPU"""
     form_factor = request.args.get('form_factor')
     gpu_length = request.args.get('gpu_length')
     
@@ -408,13 +499,14 @@ def get_cases():
         print(f"Error fetching Cases: {e}")
         return jsonify({"error": f"Error fetching Cases: {str(e)}"}), 500
 
+# API: Check if all selected components are compatible
 @app.route("/api/manual/validate", methods=["POST"])
 def validate_build():
-    """Validate complete PC build"""
     build = request.json
     errors = []
     warnings = []
 
+    # Check if all components are selected
     required_keys = ['cpu', 'motherboard', 'gpu', 'ram', 'cooler', 'storage', 'psu', 'case']
     for key in required_keys:
         if key not in build or not build[key]:
@@ -424,14 +516,16 @@ def validate_build():
         return jsonify({"isValid": False, "errors": errors, "warnings": warnings})
 
     try:
+        # Check if PSU has enough power for CPU and GPU
         cpu_tdp = build['cpu'].get('TDP', 0)
         gpu_tdp = build['gpu'].get('TDP', 0)
         psu_wattage = build['psu'].get('Wattage', 0)
-        recommended_psu = cpu_tdp + gpu_tdp + 150
+        recommended_psu = cpu_tdp + gpu_tdp + 150  # Add 150W for other components
         
         if psu_wattage < recommended_psu:
             warnings.append(f"PSU Warning: Selected PSU ({psu_wattage}W) might be underpowered. {recommended_psu}W recommended.")
 
+        # Check if GPU fits inside the case
         gpu_length = build['gpu'].get('Length_cm', 0)
         case_max_length = build['case'].get('Max_GPU_Length_cm', 0)
 
@@ -445,18 +539,24 @@ def validate_build():
     return jsonify({"isValid": is_valid, "errors": errors, "warnings": warnings})
 
 # ============================================================================
-# PERFORMANCE PREDICTION API
+# PERFORMANCE PREDICTION - Predict FPS and gaming performance
 # ============================================================================
 
+# Show performance prediction page
+@app.route('/performance-predict')
+def performance_predict():
+    return render_template('performance.html')
+
+# Get performance score for a CPU or GPU
 def get_score(part_name):
-    """Retrieve hardware score from database with flexible matching"""
+    """Find hardware score from database using fuzzy matching"""
     if not part_name or not hw_db:
         return 0
     
-    # Clean the input
+    # Remove spaces and special characters for matching
     clean_input = str(part_name).lower().replace(" ", "").replace("-", "")
     
-    # Try exact match first
+    # Try to find exact match first
     if clean_input in hw_db:
         return hw_db[clean_input]
     
@@ -505,11 +605,14 @@ def get_score(part_name):
     print(f"⚠ No match found for: {part_name}")
     return 0
 
+# Calculate system bottleneck (which component limits performance)
 def calculate_bottleneck(c_score, g_score, res_code):
-    """Calculate bottleneck percentage"""
+    """Calculate bottleneck percentage and identify limiting component"""
     MAX_CPU_SCORE = 30000.0
     MAX_GPU_SCORE = 30000.0
     
+    # Different resolutions stress CPU vs GPU differently
+    # 1080P: CPU matters more, 4K: GPU matters more
     if res_code == 2:  # 1080P
         cpu_weight = 0.55
     elif res_code == 4:  # 4K
@@ -519,28 +622,32 @@ def calculate_bottleneck(c_score, g_score, res_code):
     else:
         cpu_weight = 0.50
     
+    # Normalize scores to 0-1 range
     cpu_norm = min(c_score / MAX_CPU_SCORE, 1.0)
     gpu_norm = min(g_score / MAX_GPU_SCORE, 1.0)
     
+    # Calculate effectiveness based on resolution weighting
     cpu_eff = cpu_norm / cpu_weight
     gpu_eff = gpu_norm / (1 - cpu_weight)
     
+    # Determine which component is the bottleneck
     if cpu_eff > gpu_eff:
-        bottleneck_type = "GPU"
+        bottleneck_type = "GPU"  # GPU is limiting performance
         percentage_loss = abs(1 - (gpu_eff / cpu_eff))
     elif gpu_eff > cpu_eff:
-        bottleneck_type = "CPU"
+        bottleneck_type = "CPU"  # CPU is limiting performance
         percentage_loss = abs(1 - (cpu_eff / gpu_eff))
     else:
-        return 0, "Balanced"
+        return 0, "Balanced"  # Perfect balance
     
     bottleneck_pct = min(int(percentage_loss * 100 * 0.40), 99)
     return bottleneck_pct, bottleneck_type
 
+# API: Predict gaming performance for a PC build
 @app.route('/api/performance/predict', methods=['POST'])
 def predict_performance():
-    """Predict PC performance using ML models"""
     try:
+        # Get PC components from request
         data = request.json
         cpu_name = data.get('cpu')
         gpu_name = data.get('gpu')
@@ -551,12 +658,14 @@ def predict_performance():
         print(f"GPU: {gpu_name}")
         print(f"RAM: {ram_gb}GB")
 
+        # Look up performance scores for CPU and GPU
         c_score = get_score(cpu_name)
         g_score = get_score(gpu_name)
 
         print(f"CPU Score: {c_score}")
         print(f"GPU Score: {g_score}")
 
+        # Check if components were found in database
         if c_score == 0 and g_score == 0:
             return jsonify({
                 "error": "Both CPU and GPU not found in database",
@@ -573,6 +682,7 @@ def predict_performance():
                 "details": f"GPU '{gpu_name}' not found. Please add it to data/hardware_lookup.csv"
             }), 404
 
+        # Normalize all values to 0-1 range for calculations
         MAX_FPS_FOR_SUITABILITY = 150.0
         MAX_CPU_SCORE = 30000.0
         MAX_GPU_SCORE = 30000.0
@@ -584,6 +694,14 @@ def predict_performance():
         
         bottleneck_pct_static, bottleneck_type_static = calculate_bottleneck(c_score, g_score, 2)
 
+        # Resolution FPS multipliers based on real-world performance
+        # These are applied as post-processing to base 1080p predictions
+        resolution_fps_multipliers = {
+            '1080p': 1.0,      # Baseline
+            '1440p': 0.65,     # ~35% FPS reduction
+            '4K': 0.42         # ~58% FPS reduction
+        }
+
         resolutions = [
             {"name": "1080p", "code": 2},
             {"name": "1440p", "code": 3},
@@ -592,15 +710,56 @@ def predict_performance():
         
         results = []
         
+        # Strategy: Try CSV exact match first, fallback to model prediction
+        print("\n--- FPS Prediction Strategy: CSV First → Model Fallback ---")
+        
+        # First, predict base FPS at 1080p using the model
+        if fps_model and gaming_model:
+            # Use 1080p baseline (multiplier = 1.0) for prediction
+            base_features = [[c_score, g_score, ram_gb, 1.0]]
+            base_fps_1080 = fps_model.predict(base_features)[0]
+        else:
+            # Fallback calculation if model not loaded
+            base_fps_1080 = 120 * (N_GPU * 0.6 + N_CPU * 0.4)
+        
+        # Now generate predictions for each resolution by applying multipliers
+        previous_res_fps = None  # Track previous resolution FPS for validation
+        
         for res in resolutions:
-            features = [[c_score, g_score, ram_gb, res['code']]]
+            res_name = res['name']
+            multiplier = resolution_fps_multipliers[res_name]
             
-            if fps_model and gaming_model:
-                pred_fps = int(fps_model.predict(features)[0])
+            # Calculate model prediction for comparison
+            model_pred_fps = int(base_fps_1080 * multiplier)
+            
+            # Try to find exact match in CSV first
+            exact_fps = find_exact_fps_from_csv(c_score, g_score, ram_gb, res_name)
+            
+            # Validation: CSV FPS should follow correct ordering
+            # Higher resolution = Lower FPS (1080p > 1440p > 4K)
+            use_csv = False
+            if exact_fps is not None:
+                # Check if CSV data follows correct ordering
+                if previous_res_fps is None or exact_fps < previous_res_fps:
+                    # CSV data looks valid
+                    pred_fps = exact_fps
+                    use_csv = True
+                else:
+                    # CSV data violates resolution ordering - use model instead
+                    pred_fps = model_pred_fps
+                    print(f"  ⚠ CSV Invalid ({res_name}={exact_fps} >= previous={previous_res_fps}) → Using Model: {pred_fps} FPS")
+            else:
+                # No CSV match - use model
+                pred_fps = model_pred_fps
+                print(f"  → Model Prediction: {res_name} = {pred_fps} FPS")
+            
+            previous_res_fps = pred_fps  # Update for next iteration
+            
+            # Predict gaming suitability
+            if gaming_model:
+                features = [[c_score, g_score, ram_gb, multiplier]]
                 is_gaming_good = gaming_model.predict(features)[0]
             else:
-                # Fallback if models not loaded
-                pred_fps = int(120 * (N_GPU + N_CPU) / 2)
                 is_gaming_good = 1 if pred_fps > 60 else 0
             
             # Simple suitability calculation
@@ -636,13 +795,11 @@ def predict_performance():
 
 if __name__ == '__main__':
     print("="*60)
-    print("🦄 Unicorn PC Builder - Backend API Server")
+    print("AI PC Builder - Starting Server")
     print("="*60)
-    print("📍 API Base URL: http://127.0.0.1:5000")
-    print("🔍 Health Check: http://127.0.0.1:5000/api/health")
-    print("📚 API Endpoints:")
-    print("   - /api/intelligent/*")
-    print("   - /api/manual/*")
-    print("   - /api/performance/*")
+    print("Homepage: http://127.0.0.1:5000")
+    print("Intelligent Build: http://127.0.0.1:5000/intelligent-build")
+    print("Manual Build: http://127.0.0.1:5000/manual-build")
+    print("Performance Predict: http://127.0.0.1:5000/performance-predict")
     print("="*60)
     app.run(debug=True, port=5000)
