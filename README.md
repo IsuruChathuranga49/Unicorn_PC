@@ -1,155 +1,335 @@
-# Unicorn PC Builder 🦄
+# 🦄 Unicorn PC Builder
 
-Complete PC Building Platform with AI-Powered Intelligence
+Complete PC Building Platform with AI-Powered Intelligence - **Separated Backend & Frontend Architecture**
 
-## Features
-
-### 🤖 Intelligent Build Mode
-- AI-powered PC recommendations based on budget, use case, and requirements
-- Gaming FPS targeting (60-300 FPS)
-- Resolution optimization (1080P, 1440P, 4K)
-- Automatic CPU + GPU + RAM combo selection
-
-### 🔧 Manual Build Mode
-- Step-by-step component selection
-- CPU Brand → CPU → Motherboard → GPU → RAM → Cooler → Storage → PSU → Case
-- Real-time compatibility validation
-- Live price tracking
-
-### 📊 Performance Prediction Model
-- Machine Learning-powered performance analysis
-- FPS prediction for different resolutions
-- Suitability score calculation
-- Bottleneck detection (CPU vs GPU)
-- Gaming rating assessment
-
-## Project Structure
+## 🏗️ Project Structure
 
 ```
-Unicorn PC Builder/
-├── app.py                      # Main Flask application
-├── requirements.txt            # Python dependencies
-├── serviceAccountKey.json      # Firebase credentials (optional)
-├── data/
-│   ├── final_ruleset_data.csv # Intelligent Build dataset
-│   └── hardware_lookup.csv    # Hardware scores database
-├── models/
-│   ├── fps_model.pkl          # FPS prediction model
-│   ├── gaming_model.pkl       # Gaming suitability model
-│   └── render_model.pkl       # Render performance model
-├── templates/
-│   ├── index.html             # Homepage
-│   ├── intelligent_build.html # Intelligent Build UI
-│   ├── manual_build.html      # Manual Build UI
-│   └── performance.html       # Performance Prediction UI
-└── static/
-    ├── css/
-    │   ├── manual_build.css
-    │   └── performance.css
-    └── js/
-        ├── manual_build.js
-        └── performance.js
+Unicorn_PC/
+├── Backend/                    # Flask REST API
+│   ├── app.py                 # API endpoints
+│   ├── requirements.txt       # Python dependencies
+│   ├── data/                  # CSV data files
+│   ├── models/                # ML models (99MB)
+│   └── serviceAccountKey.json # Firebase credentials
+│
+├── frontend/                   # Next.js Application
+│   ├── app/                   # Next.js App Router
+│   │   ├── page.jsx          # Homepage
+│   │   ├── intelligent-build/ # AI Build Mode
+│   │   ├── manual-build/     # Manual Build Mode
+│   │   └── performance/      # Performance Prediction
+│   ├── services/             # API service layer
+│   └── package.json
+│
+└── .agent/                    # Workflows & deployment guides
 ```
 
-## Setup Instructions
+## 🚀 Quick Start
 
-### 1. Copy Data Files
-Copy the following files from the original folders:
+### Backend Setup
 
-From `Intelligent Build Mode/`:
-- `final_ruleset_data.csv` → `data/`
+1. **Navigate to Backend**
 
-From `Perfomance Predict model/`:
-- `hardware_lookup.csv` → `data/`
-- All `.pkl` files from `models/` → `models/`
-
-From `Manual Build Mode/` (optional):
-- `serviceAccountKey.json` → root folder (for Firebase)
-
-### 2. Install Dependencies
 ```powershell
-cd "c:\Users\Isuru Chathuranga\Desktop\Project\Unicorn PC Builder"
+cd Backend
+```
+
+2. **Install Dependencies**
+
+```powershell
 pip install -r requirements.txt
 ```
 
-### 3. Run the Application
+3. **Run Backend Server**
+
 ```powershell
 python app.py
 ```
 
-The server will start at `http://127.0.0.1:5000`
+Backend runs at: **http://localhost:5000**
 
-## Usage
+### Frontend Setup
 
-### Homepage
-Navigate to `http://127.0.0.1:5000` to see two options:
-- **Intelligent Build** - AI-powered recommendations
-- **Manual Build** - Step-by-step custom builds
+1. **Navigate to Frontend**
 
-### Intelligent Build Flow
-1. Select use case (Gaming, Productivity, Design/Render, Workstation)
-2. Choose resolution (1080P, 1440P, 4K)
-3. For Gaming: Select target FPS (60-300)
-4. Enter budget
-5. Get AI recommendation
-6. Automatically redirect to Performance Prediction
+```powershell
+cd frontend
+```
 
-### Manual Build Flow
-1. Select CPU brand (Intel/AMD)
-2. Choose CPU
-3. Select compatible Motherboard
-4. Pick GPU
-5. Choose RAM
-6. Select Cooler
-7. Pick Storage
-8. Choose PSU
-9. Select Case
-10. Validate build
-11. Predict performance
+2. **Install Dependencies**
 
-### Performance Prediction
-- Displays selected components
-- Shows FPS predictions for 1080p, 1440p, 4K
-- Calculates suitability scores
-- Identifies bottlenecks
-- Provides gaming ratings
+```powershell
+npm install
+```
 
-## API Endpoints
+3. **Create Environment File**
+
+Create `frontend/.env.local`:
+
+```
+NEXT_PUBLIC_API_URL=http://localhost:5000
+```
+
+4. **Run Development Server**
+
+```powershell
+npm run dev
+```
+
+Frontend runs at: **http://localhost:3000**
+
+## 🎯 Features
+
+### 🤖 Intelligent Build Mode
+
+- AI-powered PC recommendations
+- Budget-based filtering ($649 - $7000+)
+- Gaming FPS targeting (60-300 FPS)
+- Multiple use cases (Gaming, Productivity, Design, Workstation)
+- 4550+ PC configurations database
+- Automatic performance prediction
+
+### 🔧 Manual Build Mode
+
+- 9-step guided component selection
+- Real-time compatibility checking
+- Socket validation (CPU ↔ Motherboard ↔ Cooler)
+- RAM type matching (DDR4/DDR5)
+- GPU length validation
+- PSU wattage calculation
+- Live price tracking
+- Build validation with warnings
+
+### 📊 Performance Prediction
+
+- Machine Learning-powered FPS predictions
+- Multi-resolution analysis (1080p, 1440p, 4K)
+- Bottleneck detection (CPU vs GPU)
+- Suitability scoring (0-100%)
+- Gaming rating assessment
+- Visual performance indicators
+
+## 🛠️ Tech Stack
+
+### Backend
+
+- **Framework**: Flask 3.0.0
+- **ML**: scikit-learn 1.3.2
+- **Data**: pandas 2.1.4, numpy 1.26.2
+- **Database**: Firebase Firestore (optional)
+- **Server**: Gunicorn (production)
+
+### Frontend
+
+- **Framework**: Next.js 15 (App Router)
+- **UI**: React 19
+- **Styling**: Tailwind CSS 4
+- **API**: Fetch API with service layer
+
+## 📡 API Endpoints
 
 ### Intelligent Build
+
 - `GET /api/intelligent/options` - Get available options
 - `POST /api/intelligent/recommend` - Get AI recommendation
 
 ### Manual Build
-- `GET /api/manual/cpus?brand=Intel` - Get CPUs by brand
+
+- `GET /api/manual/cpus?brand=Intel` - Get CPUs
 - `GET /api/manual/motherboards?socket=LGA1700` - Get motherboards
 - `GET /api/manual/gpus` - Get all GPUs
-- `GET /api/manual/ram?ram_type=DDR4` - Get RAM by type
+- `GET /api/manual/ram?ram_type=DDR4` - Get RAM
 - `GET /api/manual/coolers?socket=LGA1700` - Get coolers
-- `GET /api/manual/storage` - Get storage options
+- `GET /api/manual/storage` - Get storage
 - `GET /api/manual/psus` - Get PSUs
 - `GET /api/manual/cases?form_factor=ATX&gpu_length=24` - Get cases
-- `POST /api/manual/validate` - Validate complete build
+- `POST /api/manual/validate` - Validate build
+
+### Performance
+
+- `POST /api/performance/predict` - Predict performance
+
+### Health
+
+- `GET /api/health` - Server health check
+
+## 🧪 Testing
+
+### Test Backend
+
+```powershell
+cd Backend
+python app.py
+
+# In another terminal:
+curl http://localhost:5000/api/health
+```
+
+### Test Frontend
+
+```powershell
+cd frontend
+npm run dev
+
+# Open browser: http://localhost:3000
+```
+
+## 🚀 Production Deployment
+
+### Backend (Azure App Service)
+
+```powershell
+cd Backend
+az webapp up --name unicorn-pc-backend --runtime PYTHON:3.11
+```
+
+### Frontend (Vercel)
+
+```powershell
+cd frontend
+npm run build
+vercel --prod
+```
+
+See `.agent/workflows/azure-deployment.md` for detailed deployment guide.
+
+## 📁 Data Files
+
+### Required Files
+
+- `Backend/data/final_ruleset_data.csv` (313 KB) - 4550 PC configurations
+- `Backend/data/hardware_lookup.csv` (2.6 KB) - Hardware scores
+- `Backend/models/fps_model.pkl` (96 MB) - FPS prediction model
+- `Backend/models/gaming_model.pkl` (1.4 MB) - Gaming model
+- `Backend/models/render_model.pkl` (1 MB) - Render model
+- `Backend/serviceAccountKey.json` (optional) - Firebase credentials
+
+## 🔐 Environment Variables
+
+### Backend (.env)
+
+```
+FLASK_ENV=development
+FLASK_DEBUG=True
+PORT=5000
+```
+
+### Frontend (.env.local)
+
+```
+NEXT_PUBLIC_API_URL=http://localhost:5000
+```
+
+## 📊 Project Statistics
+
+| Metric                | Count          |
+| --------------------- | -------------- |
+| Backend API Endpoints | 14             |
+| Frontend Pages        | 4              |
+| React Components      | 10+            |
+| ML Models             | 3 (99 MB)      |
+| PC Configurations     | 4550+          |
+| Hardware Database     | 40+ components |
+| Total Lines of Code   | ~3000+         |
+
+## 🎨 Screenshots
+
+### Homepage
+
+Two build modes: Intelligent Build (AI) & Manual Build (Step-by-step)
+
+### Intelligent Build
+
+Budget slider, use case selector, resolution picker, FPS target
+
+### Manual Build
+
+9-step wizard with real-time compatibility checking
 
 ### Performance Prediction
-- `POST /api/performance/predict` - Predict performance
-  - Body: `{"cpu": "i5-12400F", "gpu": "RTX3060", "ram": 16}`
 
-## Notes
+FPS predictions, bottleneck analysis, gaming ratings
 
-- If Firebase is not configured, Manual Build will use mock data
-- ML models must be present in `models/` folder for predictions to work
-- All CSV files must be in `data/` folder
-- The application integrates all three original modes into one unified system
+## 🔄 Development Workflow
 
-## Technologies Used
+1. **Start Backend**
 
-- **Backend**: Flask (Python)
-- **Frontend**: HTML5, CSS3, JavaScript
-- **ML**: scikit-learn, joblib
-- **Database**: Firebase Firestore (optional), CSV files
-- **Data Processing**: pandas, numpy
+   ```powershell
+   cd Backend
+   python app.py
+   ```
 
-## Author
+2. **Start Frontend** (new terminal)
 
-Unicorn PC Builder - 2024
+   ```powershell
+   cd frontend
+   npm run dev
+   ```
+
+3. **Open Browser**
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:5000/api/health
+
+## 📝 Notes
+
+- Backend must be running for Frontend to work
+- Firebase is optional (will use mock data if not configured)
+- ML models are required for performance predictions
+- CORS is configured for localhost:3000
+
+## 🐛 Troubleshooting
+
+### Backend Issues
+
+- **Port 5000 in use**: Change port in `Backend/app.py`
+- **ML models not found**: Ensure `.pkl` files are in `Backend/models/`
+- **Firebase error**: Check `serviceAccountKey.json` or ignore (optional)
+
+### Frontend Issues
+
+- **API connection failed**: Ensure Backend is running on port 5000
+- **Build errors**: Run `npm install` in frontend folder
+- **Env variables**: Create `.env.local` with `NEXT_PUBLIC_API_URL`
+
+## 📚 Documentation
+
+- `Backend/README.md` - Backend API documentation
+- `frontend/README.md` - Frontend setup guide
+- `.agent/workflows/azure-deployment.md` - Deployment guide
+
+## 🎯 Next Steps
+
+1. ✅ Backend & Frontend separated
+2. ✅ Full-featured pages created
+3. ⏳ Test both servers
+4. ⏳ Deploy to Azure/Vercel
+5. ⏳ Add more features
+
+## 📞 Support
+
+For issues:
+
+1. Check if both Backend and Frontend are running
+2. Verify environment variables
+3. Check browser console for errors
+4. Check terminal for server errors
+
+## 🏆 Features Comparison
+
+| Feature      | Old (Monolithic)      | New (Separated)                |
+| ------------ | --------------------- | ------------------------------ |
+| Architecture | Single Flask app      | Backend API + Next.js Frontend |
+| Deployment   | Single server         | Separate deployments           |
+| Scalability  | Limited               | High                           |
+| Performance  | Server-side rendering | Client-side + SSR              |
+| Development  | Coupled               | Independent                    |
+| Modern UI    | Basic HTML/CSS        | React + Tailwind CSS           |
+
+## 📄 License
+
+© 2024 Unicorn PC Builder - All Rights Reserved 🦄
+
+---
+
+**Built with ❤️ using Flask, Next.js, React, and Machine Learning**
